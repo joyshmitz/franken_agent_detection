@@ -33,9 +33,9 @@ pub use types::{
 // Re-export connector infrastructure at crate root.
 #[cfg(feature = "connectors")]
 pub use connectors::{
-    Connector, PathTrie, ScanContext, ScanRoot, WorkspaceCache, clawdbot::ClawdbotConnector,
-    file_modified_since, flatten_content, franken_detection_for_connector, parse_timestamp,
-    vibe::VibeConnector,
+    Connector, PathTrie, ScanContext, ScanRoot, WorkspaceCache, aider::AiderConnector,
+    clawdbot::ClawdbotConnector, file_modified_since, flatten_content,
+    franken_detection_for_connector, parse_timestamp, vibe::VibeConnector,
 };
 
 use serde::{Deserialize, Serialize};

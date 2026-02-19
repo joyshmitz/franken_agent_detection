@@ -2,6 +2,7 @@
 //!
 //! Utilities, data structures, and scan primitives used by all 15 connectors.
 
+pub mod aider;
 pub mod clawdbot;
 pub mod path_trie;
 pub mod scan;
