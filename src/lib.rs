@@ -119,6 +119,43 @@ fn home_join(parts: &[&str]) -> Option<PathBuf> {
     Some(path)
 }
 
+fn cwd_join(parts: &[&str]) -> Option<PathBuf> {
+    let mut path = std::env::current_dir().ok()?;
+    for part in parts {
+        path.push(part);
+    }
+    Some(path)
+}
+
+fn env_override_roots(slug: &str) -> Option<Vec<PathBuf>> {
+    let read = |key: &str| std::env::var(key).ok().map(|v| v.trim().to_string());
+
+    match slug {
+        "aider" => {
+            let root = read("CASS_AIDER_DATA_ROOT")?;
+            if root.is_empty() {
+                return None;
+            }
+            Some(vec![PathBuf::from(root)])
+        }
+        "codex" => {
+            let root = read("CODEX_HOME")?;
+            if root.is_empty() {
+                return None;
+            }
+            Some(vec![PathBuf::from(root).join("sessions")])
+        }
+        "pi_agent" => {
+            let root = read("PI_CODING_AGENT_DIR")?;
+            if root.is_empty() {
+                return None;
+            }
+            Some(vec![PathBuf::from(root).join("sessions")])
+        }
+        _ => None,
+    }
+}
+
 fn default_probe_roots(slug: &str) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut push = |parts: &[&str]| {
@@ -131,12 +168,21 @@ fn default_probe_roots(slug: &str) -> Vec<PathBuf> {
         "aider" => {
             push(&[".aider.chat.history.md"]);
             push(&[".aider"]);
+            if let Some(cwd_marker) = cwd_join(&[".aider.chat.history.md"]) {
+                out.push(cwd_marker);
+            }
         }
         "amp" => {
             push(&[".local", "share", "amp"]);
             push(&["Library", "Application Support", "amp"]);
             push(&["AppData", "Roaming", "amp"]);
-            push(&[".config", "Code", "User", "globalStorage", "sourcegraph.amp"]);
+            push(&[
+                ".config",
+                "Code",
+                "User",
+                "globalStorage",
+                "sourcegraph.amp",
+            ]);
             push(&[
                 "Library",
                 "Application Support",
@@ -170,8 +216,7 @@ fn default_probe_roots(slug: &str) -> Vec<PathBuf> {
             push(&[".config", "cline"]);
         }
         "codex" => {
-            push(&[".codex"]);
-            push(&[".config", "codex"]);
+            push(&[".codex", "sessions"]);
         }
         "cursor" => {
             push(&[".cursor"]);
@@ -198,7 +243,6 @@ fn default_probe_roots(slug: &str) -> Vec<PathBuf> {
             push(&[".openclaw", "agents"]);
         }
         "pi_agent" => {
-            push(&[".pi", "agent"]);
             push(&[".pi", "agent", "sessions"]);
         }
         "vibe" => {
@@ -249,6 +293,9 @@ fn detect_roots(
 }
 
 fn entry_from_detect(slug: &'static str) -> InstalledAgentDetectionEntry {
+    if let Some(override_roots) = env_override_roots(slug) {
+        return detect_roots(slug, &override_roots, "env");
+    }
     let roots = default_probe_roots(slug);
     detect_roots(slug, &roots, "default")
 }
@@ -544,13 +591,7 @@ mod tests {
         assert_eq!(
             slugs,
             vec![
-                "aider",
-                "amp",
-                "chatgpt",
-                "clawdbot",
-                "openclaw",
-                "pi_agent",
-                "vibe"
+                "aider", "amp", "chatgpt", "clawdbot", "openclaw", "pi_agent", "vibe"
             ]
         );
 
