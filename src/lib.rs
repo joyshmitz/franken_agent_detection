@@ -1,8 +1,42 @@
 //! Local coding-agent installation detection.
 //!
 //! Provides synchronous, filesystem-based probes for known coding-agent CLIs.
+//!
+//! ## Types
+//!
+//! The [`types`] module contains normalized types for representing agent conversations:
+//! - [`DetectionResult`](types::DetectionResult) — always available
+//! - [`NormalizedConversation`], [`NormalizedMessage`], [`NormalizedSnippet`]
+//!   — available with the `connectors` feature
 
 #![forbid(unsafe_code)]
+
+#[cfg(feature = "connectors")]
+pub mod connectors;
+pub mod types;
+
+// Re-export core types at crate root for convenience.
+pub use types::DetectionResult;
+#[cfg(feature = "connectors")]
+pub use types::{
+    // Scan & provenance types
+    LOCAL_SOURCE_ID,
+    NormalizedConversation,
+    NormalizedMessage,
+    NormalizedSnippet,
+    Origin,
+    PathMapping,
+    Platform,
+    SourceKind,
+    reindex_messages,
+};
+// Re-export connector infrastructure at crate root.
+#[cfg(feature = "connectors")]
+pub use connectors::{
+    Connector, PathTrie, ScanContext, ScanRoot, WorkspaceCache, clawdbot::ClawdbotConnector,
+    file_modified_since, flatten_content, franken_detection_for_connector, parse_timestamp,
+    vibe::VibeConnector,
+};
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
