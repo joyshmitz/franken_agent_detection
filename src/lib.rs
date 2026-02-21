@@ -31,20 +31,25 @@ pub use types::{
     reindex_messages,
 };
 // Re-export connector infrastructure at crate root.
+#[cfg(feature = "chatgpt")]
+pub use connectors::chatgpt::ChatGptConnector;
+#[cfg(feature = "cursor")]
+pub use connectors::cursor::CursorConnector;
+#[cfg(feature = "opencode")]
+pub use connectors::opencode::OpenCodeConnector;
 #[cfg(feature = "connectors")]
 pub use connectors::token_extraction::{ExtractedTokenUsage, ModelInfo, TokenDataSource};
 #[cfg(feature = "connectors")]
 pub use connectors::{
     Connector, PathTrie, ScanContext, ScanRoot, WorkspaceCache, aider::AiderConnector,
     amp::AmpConnector, claude_code::ClaudeCodeConnector, clawdbot::ClawdbotConnector,
-    cline::ClineConnector, copilot::CopilotConnector, estimate_tokens_from_content,
-    extract_claude_code_tokens, extract_codex_tokens, extract_tokens_for_agent,
-    factory::FactoryConnector, file_modified_since, flatten_content,
-    franken_detection_for_connector, gemini::GeminiConnector, normalize_model, parse_timestamp,
-    pi_agent::PiAgentConnector, token_extraction, vibe::VibeConnector,
+    cline::ClineConnector, codex::CodexConnector, copilot::CopilotConnector,
+    estimate_tokens_from_content, extract_claude_code_tokens, extract_codex_tokens,
+    extract_tokens_for_agent, factory::FactoryConnector, file_modified_since, flatten_content,
+    franken_detection_for_connector, gemini::GeminiConnector, get_connector_factories,
+    normalize_model, openclaw::OpenClawConnector, parse_timestamp, pi_agent::PiAgentConnector,
+    token_extraction, vibe::VibeConnector,
 };
-#[cfg(feature = "chatgpt")]
-pub use connectors::chatgpt::ChatGptConnector;
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

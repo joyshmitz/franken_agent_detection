@@ -9,9 +9,15 @@ pub mod chatgpt;
 pub mod claude_code;
 pub mod clawdbot;
 pub mod cline;
+pub mod codex;
 pub mod copilot;
+#[cfg(feature = "cursor")]
+pub mod cursor;
 pub mod factory;
 pub mod gemini;
+pub mod openclaw;
+#[cfg(feature = "opencode")]
+pub mod opencode;
 pub mod path_trie;
 pub mod pi_agent;
 pub mod scan;
@@ -100,4 +106,36 @@ pub fn franken_detection_for_connector(connector_slug: &str) -> Option<Detection
         });
     }
     None
+}
+
+/// Get all available connector factories.
+///
+/// Returns a vec of (slug, constructor) pairs for every connector compiled into
+/// this build. Feature-gated connectors (chatgpt, cursor) are conditionally
+/// included based on the enabled Cargo features.
+#[allow(clippy::type_complexity)]
+pub fn get_connector_factories() -> Vec<(&'static str, fn() -> Box<dyn Connector + Send>)> {
+    let mut v: Vec<(&'static str, fn() -> Box<dyn Connector + Send>)> = vec![
+        ("codex", || Box::new(codex::CodexConnector::new())),
+        ("cline", || Box::new(cline::ClineConnector::new())),
+        ("gemini", || Box::new(gemini::GeminiConnector::new())),
+        ("claude", || {
+            Box::new(claude_code::ClaudeCodeConnector::new())
+        }),
+        ("clawdbot", || Box::new(clawdbot::ClawdbotConnector::new())),
+        ("vibe", || Box::new(vibe::VibeConnector::new())),
+        ("amp", || Box::new(amp::AmpConnector::new())),
+        ("aider", || Box::new(aider::AiderConnector::new())),
+        ("pi_agent", || Box::new(pi_agent::PiAgentConnector::new())),
+        ("factory", || Box::new(factory::FactoryConnector::new())),
+        ("openclaw", || Box::new(openclaw::OpenClawConnector::new())),
+        ("copilot", || Box::new(copilot::CopilotConnector::new())),
+    ];
+    #[cfg(feature = "opencode")]
+    v.push(("opencode", || Box::new(opencode::OpenCodeConnector::new())));
+    #[cfg(feature = "chatgpt")]
+    v.push(("chatgpt", || Box::new(chatgpt::ChatGptConnector::new())));
+    #[cfg(feature = "cursor")]
+    v.push(("cursor", || Box::new(cursor::CursorConnector::new())));
+    v
 }

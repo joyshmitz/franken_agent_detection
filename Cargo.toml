@@ -26,10 +26,11 @@ tracing = { version = "*", optional = true }
 dotenvy = { version = "*", optional = true }
 bloomfilter = { version = "*", optional = true }
 once_cell = { version = "*", optional = true }
+urlencoding = { version = "*", optional = true }
 
 # --- Optional: ChatGPT encrypted conversations ---
 aes-gcm = { version = "*", optional = true }
-base64 = { version = "*", optional = true }
+base64 = { version = "0.22", optional = true }
 
 # --- Optional: Cursor/OpenCode SQLite session databases ---
 rusqlite = { version = "*", optional = true, features = ["bundled", "modern_sqlite"] }
@@ -49,9 +50,11 @@ connectors = [
 # ChatGPT: AES-256-GCM decryption for v2/v3 encrypted conversations
 chatgpt = ["connectors", "dep:aes-gcm", "dep:base64"]
 # Cursor: SQLite database access for state.vscdb
-cursor = ["connectors", "dep:rusqlite"]
+cursor = ["connectors", "dep:rusqlite", "dep:urlencoding"]
+# OpenCode connector support
+opencode = ["connectors"]
 # All connectors enabled
-all-connectors = ["connectors", "chatgpt", "cursor"]
+all-connectors = ["connectors", "chatgpt", "cursor", "opencode"]
 
 [dev-dependencies]
 tempfile = "3"

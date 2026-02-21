@@ -386,8 +386,7 @@ impl Connector for OpenClawConnector {
                     match line_type {
                         "session" => {
                             // Extract session metadata
-                            session_cwd =
-                                val.get("cwd").and_then(|v| v.as_str()).map(String::from);
+                            session_cwd = val.get("cwd").and_then(|v| v.as_str()).map(String::from);
                             if let Some(ts) = val.get("timestamp").and_then(parse_timestamp) {
                                 started_at = Some(ts);
                             }
@@ -433,10 +432,7 @@ impl Connector for OpenClawConnector {
                             messages.push(NormalizedMessage {
                                 idx,
                                 role: role.to_string(),
-                                author: msg
-                                    .get("model")
-                                    .and_then(|v| v.as_str())
-                                    .map(String::from),
+                                author: msg.get("model").and_then(|v| v.as_str()).map(String::from),
                                 created_at: created,
                                 content,
                                 extra: val,
