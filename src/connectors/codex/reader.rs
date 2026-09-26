@@ -3,6 +3,7 @@
 use std::fs::{self, File, Metadata};
 use std::io::{self, BufRead, BufReader, Read, Take};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{Context, Result};
 use serde_json::Value;
@@ -10,6 +11,34 @@ use serde_json::Value;
 use super::super::utils::MAX_SCAN_FILE_BYTES;
 
 const PROGRESS_LINE_STRIDE: usize = 1024;
+
+/// Largest Codex rollout the primary reader admits. The reader streams records
+/// through a length-bounded handle, so this is an admission budget, not a
+/// memory bound. It defaults to the shared 100 MiB scan budget; an embedder
+/// that admits larger rollouts (cass: `CASS_CODEX_MAX_SOURCE_BYTES`) raises it.
+static ROLLOUT_BYTE_BUDGET: AtomicU64 = AtomicU64::new(MAX_SCAN_FILE_BYTES);
+
+/// Set the largest Codex rollout (bytes) the primary reader admits, process-wide.
+/// Values below one byte are treated as one byte.
+pub fn set_codex_rollout_byte_budget(bytes: u64) {
+    ROLLOUT_BYTE_BUDGET.store(bytes.max(1), Ordering::Relaxed);
+}
+
+/// The current Codex rollout admission budget (bytes).
+#[must_use]
+pub fn codex_rollout_byte_budget() -> u64 {
+    ROLLOUT_BYTE_BUDGET.load(Ordering::Relaxed)
+}
+
+fn admit_rollout_len(len: u64, budget: u64) -> io::Result<()> {
+    if len > budget {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Codex rollout ({len} bytes) exceeds the {budget}-byte scan budget"),
+        ));
+    }
+    Ok(())
+}
 
 pub(super) struct RolloutReader<'a> {
     path: &'a Path,
@@ -33,13 +62,7 @@ impl<'a> RolloutReader<'a> {
             )
             .into());
         }
-        if before.len() > MAX_SCAN_FILE_BYTES {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Codex rollout exceeds the 100 MiB scan byte budget",
-            )
-            .into());
-        }
+        admit_rollout_len(before.len(), codex_rollout_byte_budget())?;
         // Bound the underlying reader, not the result of read_line: even a
         // newline-free record or a concurrent appender cannot grow it forever.
         let input = BufReader::new(file.take(before.len()));
@@ -176,6 +199,21 @@ mod tests {
     use super::*;
     use std::io::Cursor;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn rollout_admission_is_bounded_by_the_configured_budget() {
+        assert_eq!(
+            codex_rollout_byte_budget(),
+            MAX_SCAN_FILE_BYTES,
+            "the default budget is the shared scan budget"
+        );
+        assert!(admit_rollout_len(MAX_SCAN_FILE_BYTES, MAX_SCAN_FILE_BYTES).is_ok());
+        let over = admit_rollout_len(MAX_SCAN_FILE_BYTES + 1, MAX_SCAN_FILE_BYTES)
+            .expect_err("one byte over the budget is refused");
+        assert_eq!(over.kind(), io::ErrorKind::InvalidData);
+        // A raised budget admits a rollout the default refuses.
+        assert!(admit_rollout_len(MAX_SCAN_FILE_BYTES + 1, 4 * MAX_SCAN_FILE_BYTES).is_ok());
+    }
 
     #[test]
     fn records_keep_physical_indices_bom_crlf_and_complete_eof() {

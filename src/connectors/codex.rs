@@ -1,6 +1,8 @@
 mod reader;
 mod user_prompts;
 
+pub use reader::{codex_rollout_byte_budget, set_codex_rollout_byte_budget};
+
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
